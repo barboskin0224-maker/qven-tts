@@ -1,1 +1,109 @@
 
+
+<!DOCTYPE html>
+
+<html lang="uk">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>QVEN TTS</title>
+
+<style>
+
+*{box-sizing:border-box}
+
+body{margin:0;background:#10111a;color:white;font-family:Arial,sans-serif;padding:25px}
+
+.container{max-width:600px;margin:40px auto;background:#1c1e2b;padding:25px;border-radius:20px}
+
+h1{text-align:center;color:#9b8cff}
+
+p{text-align:center;color:#aaa}
+
+textarea{width:100%;height:180px;background:#10111a;color:white;border:1px solid #444;border-radius:12px;padding:15px;font-size:16px}
+
+select{width:100%;padding:12px;margin:15px 0;background:#10111a;color:white;border-radius:10px}
+
+button{width:100%;padding:15px;margin-top:10px;border:0;border-radius:10px;background:#8065ff;color:white;font-size:16px;font-weight:bold}
+
+button.secondary{background:#34364a}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>QVEN TTS</h1>
+
+<p>Text to Speech</p>
+
+<textarea id="text" placeholder="Enter your text here..."></textarea>
+
+<select id="voices"></select>
+
+<button onclick="speak()">▶ Озвучити текст</button>
+
+<button class="secondary" onclick="stop()">■ Зупинити</button>
+
+</div>
+
+<script>
+
+const voiceSelect=document.getElementById("voices");
+
+function loadVoices(){
+
+ const voices=speechSynthesis.getVoices();
+
+ voiceSelect.innerHTML="";
+
+ voices.forEach((voice,i)=>{
+
+  const option=document.createElement("option");
+
+  option.value=i;
+
+  option.textContent=voice.name+" ("+voice.lang+")";
+
+  voiceSelect.appendChild(option);
+
+ });
+
+}
+
+function speak(){
+
+ const text=document.getElementById("text").value.trim();
+
+ if(!text){alert("Введи текст!");return;}
+
+ speechSynthesis.cancel();
+
+ const utterance=new SpeechSynthesisUtterance(text);
+
+ const voices=speechSynthesis.getVoices();
+
+ utterance.voice=voices[voiceSelect.value];
+
+ speechSynthesis.speak(utterance);
+
+}
+
+function stop(){speechSynthesis.cancel();}
+
+loadVoices();
+
+speechSynthesis.onvoiceschanged=loadVoices;
+
+</script>
+
+</body>
+
+</html>
