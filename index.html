@@ -1,4 +1,4 @@
-DOCTYPE html>
+<!DOCTYPE html>
 
 <html lang="uk">
 
@@ -8,27 +8,35 @@ DOCTYPE html>
 
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<title>QVEN TTS</title>
+<title>QVEN TTS PRO</title>
 
 <style>
 
 *{box-sizing:border-box}
 
-body{margin:0;background:#10111a;color:white;font-family:Arial,sans-serif;padding:25px}
+body{margin:0;background:#10111a;color:white;font-family:Arial;padding:18px}
 
-.container{max-width:600px;margin:40px auto;background:#1c1e2b;padding:25px;border-radius:20px}
+.container{max-width:620px;margin:28px auto;background:#1c1e2b;padding:22px;border-radius:20px}
 
-h1{text-align:center;color:#9b8cff}
+h1{text-align:center;color:#a99aff}
 
 p{text-align:center;color:#aaa}
 
-textarea{width:100%;height:180px;background:#10111a;color:white;border:1px solid #444;border-radius:12px;padding:15px;font-size:16px}
+label{display:block;margin:14px 0 7px}
 
-select{width:100%;padding:12px;margin:15px 0;background:#10111a;color:white;border-radius:10px}
+textarea,select{width:100%;background:#10111a;color:white;border:1px solid #45465b;border-radius:11px;padding:13px;font-size:16px}
 
-button{width:100%;padding:15px;margin-top:10px;border:0;border-radius:10px;background:#8065ff;color:white;font-size:16px;font-weight:bold}
+textarea{height:170px}
+
+button,.download{display:block;width:100%;padding:14px;margin-top:12px;border:0;border-radius:11px;background:#8065ff;color:white;font-size:16px;font-weight:bold;text-align:center;text-decoration:none}
 
 button.secondary{background:#34364a}
+
+button:disabled{opacity:.55}
+
+audio{width:100%;margin-top:16px}
+
+#status{text-align:center;color:#c9c2ff;margin-top:14px}
 
 </style>
 
@@ -38,67 +46,145 @@ button.secondary{background:#34364a}
 
 <div class="container">
 
-<h1>QVEN TTS</h1>
+<h1>QVEN TTS PRO</h1>
 
-<p>Text to Speech</p>
+<p>AI Text to Speech · MP3</p>
 
-<textarea id="text" placeholder="Enter your text here..."></textarea>
+<label>Текст для озвучення</label>
 
-<select id="voices"></select>
+<textarea id="text" maxlength="1000" placeholder="Введи текст англійською..."></textarea>
 
-<button onclick="speak()">▶ Озвучити текст</button>
+<label>Голос</label>
 
-<button class="secondary" onclick="stop()">■ Зупинити</button>
+<select id="voice">
+
+<option value="en-US-JennyNeural">Жіночий</option>
+
+<option value="en-US-GuyNeural">Чоловічий</option>
+
+</select>
+
+<label>Швидкість: <span id="rateLabel">0%</span></label>
+
+<input id="rate" type="range" min="-50" max="50" step="5" value="0" style="width:100%">
+
+<button id="generate">Створити MP3</button>
+
+<div id="status"></div>
+
+<audio id="player" controls hidden></audio>
+
+<a id="download" class="download" hidden>⬇ Завантажити MP3</a>
+
+<button class="secondary" id="clear">Очистити</button>
 
 </div>
 
 <script>
 
-const voiceSelect=document.getElementById("voices");
+const WORKER_URL="https://qven-tts-server.barboskin0224.workers.dev/";
 
-function loadVoices(){
+const $=id=>document.getElementById(id);
 
- const voices=speechSynthesis.getVoices();
+let audioUrl=null;
 
- voiceSelect.innerHTML="";
+$("rate").addEventListener("input",()=>{
 
- voices.forEach((voice,i)=>{
+ const n=Number($("rate").value);
 
-  const option=document.createElement("option");
+ $("rateLabel").textContent=(n>0?"+":"")+n+"%";
 
-  option.value=i;
+});
 
-  option.textContent=voice.name+" ("+voice.lang+")";
+$("generate").addEventListener("click",async()=>{
 
-  voiceSelect.appendChild(option);
+ const text=$("text").value.trim();
 
- });
+ if(!text){$("status").textContent="Спочатку введи текст.";return}
 
-}
+ $("generate").disabled=true;
 
-function speak(){
+ $("status").textContent="Генерую аудіо...";
 
- const text=document.getElementById("text").value.trim();
+ $("player").hidden=true;
 
- if(!text){alert("Введи текст!");return;}
+ $("download").hidden=true;
 
- speechSynthesis.cancel();
+ if(audioUrl)URL.revokeObjectURL(audioUrl);
 
- const utterance=new SpeechSynthesisUtterance(text);
+ try{
 
- const voices=speechSynthesis.getVoices();
+  const n=Number($("rate").value);
 
- utterance.voice=voices[voiceSelect.value];
+  const response=await fetch(WORKER_URL,{
 
- speechSynthesis.speak(utterance);
+   method:"POST",
 
-}
+   headers:{"Content-Type":"application/json"},
 
-function stop(){speechSynthesis.cancel();}
+   body:JSON.stringify({
 
-loadVoices();
+    text,
 
-speechSynthesis.onvoiceschanged=loadVoices;
+    voice:$("voice").value,
+
+    rate:(n>=0?"+":"")+n+"%",
+
+    pitch:"+0Hz"
+
+   })
+
+  });
+
+  if(!response.ok)throw new Error(await response.text());
+
+  const blob=await response.blob();
+
+  if(!blob.size)throw new Error("Порожній аудіофайл");
+
+  audioUrl=URL.createObjectURL(blob);
+
+  $("player").src=audioUrl;
+
+  $("player").hidden=false;
+
+  $("download").href=audioUrl;
+
+  $("download").download="qven-tts.mp3";
+
+  $("download").hidden=false;
+
+  $("status").textContent="Готово! Можеш слухати або завантажити MP3.";
+
+ }catch(e){
+
+  $("status").textContent="Помилка: "+e.message;
+
+ }finally{
+
+  $("generate").disabled=false;
+
+ }
+
+});
+
+$("clear").addEventListener("click",()=>{
+
+ $("text").value="";
+
+ $("status").textContent="";
+
+ $("player").pause();
+
+ $("player").hidden=true;
+
+ $("download").hidden=true;
+
+ if(audioUrl)URL.revokeObjectURL(audioUrl);
+
+ audioUrl=null;
+
+});
 
 </script>
 
